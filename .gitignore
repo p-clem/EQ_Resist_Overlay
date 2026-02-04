@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+.env/
+
+# Logs / runtime artifacts
+overlay.log
+*.log
+
+# Local config (contains your EQ log path)
+config.json
+
+# Generated DB (rebuilt from npc_types.sql)
+npc_data.db
+*.db-journal
+
+# PyInstaller outputs
+build/
+dist/
+*.manifest
+*.spec.bak
+
+# VS Code
+.vscode/
+
+# Windows
+Thumbs.db
+Desktop.ini
