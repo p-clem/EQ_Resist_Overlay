@@ -10,9 +10,11 @@ ENV/
 # Logs / runtime artifacts
 overlay.log
 *.log
+*.log.old
 
 # Local config (contains your EQ log path)
 config.json
+config.json.bak_*
 
 # Generated DB (rebuilt from npc_types.sql)
 npc_data.db
@@ -23,6 +25,18 @@ build/
 dist/
 *.manifest
 *.spec.bak
+*.spec
+
+# Archives
+*.zip
+
+# Tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Release artifacts
+release/
 
 # VS Code
 .vscode/
