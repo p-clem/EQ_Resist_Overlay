@@ -1,4 +1,4 @@
-SPECIAL_ABILITIES = {
+﻿SPECIAL_ABILITIES = {
     1: "Summon",
     2: "Enrage",
     3: "Rampage",
@@ -57,6 +57,55 @@ SPECIAL_ABILITIES = {
 }
 
 
+def _iter_ability_ids(entry: str):
+    """Yield ordered, de-duplicated ability IDs from a DB `special_abilities` string.
+
+    The common format is caret-separated ability entries, where each entry is:
+    `id,param1,param2...` (comma-separated params).
+
+    Examples:
+    - "10,1^13,1^15,1" -> 10, 13, 15
+    - "1,1^2,1^3,1,4^10,1" -> 1, 2, 3, 10
+    - "1^10:1,1^14" -> 1, 10, 14 (params after ':' or ',' are ignored)
+    """
+    if not entry or str(entry).strip() == "":
+        return
+
+    seen: set[int] = set()
+
+    # Abilities are separated by '^'. Commas inside a segment are parameters.
+    # We intentionally do NOT split on ',' first, because that misreads params as abilities.
+    for segment in str(entry).split('^'):
+        token = segment.strip()
+        if not token:
+            continue
+
+        # Some sources store params like "10:1"; keep just the numeric prefix.
+        for sep in (':', ','):
+            if sep in token:
+                token = token.split(sep, 1)[0].strip()
+                break
+
+        # Accept leading digits only.
+        num = ''
+        for ch in token:
+            if ch.isdigit():
+                num += ch
+            else:
+                break
+        if not num:
+            continue
+
+        try:
+            aid = int(num)
+        except ValueError:
+            continue
+
+        if aid in SPECIAL_ABILITIES and aid not in seen:
+            seen.add(aid)
+            yield aid
+
+
 def parse_special_abilities_ids(entry: str) -> list[int]:
     """Parse a special_abilities DB string and return ordered ability IDs.
 
@@ -67,85 +116,13 @@ def parse_special_abilities_ids(entry: str) -> list[int]:
     if not entry or entry.strip() == "":
         return []
 
-    parts = [p.strip() for p in entry.split(',') if p.strip()]
-
-    seen: set[int] = set()
-    ordered: list[int] = []
-
-    def _maybe_add(token: str) -> None:
-        token = token.strip()
-        if not token:
-            return
-
-        # Some DBs store params like "10:1"; keep just the numeric prefix.
-        if ':' in token:
-            token = token.split(':', 1)[0].strip()
-
-        # Guard against weird tokens; accept leading digits only.
-        num = ''
-        for ch in token:
-            if ch.isdigit():
-                num += ch
-            else:
-                break
-        if not num:
-            return
-
-        try:
-            aid = int(num)
-        except ValueError:
-            return
-
-        if aid in SPECIAL_ABILITIES and aid not in seen:
-            seen.add(aid)
-            ordered.append(aid)
-
-    for part in parts:
-        if '^' in part:
-            for sub in part.split('^'):
-                _maybe_add(sub)
-        else:
-            _maybe_add(part)
-
-    return ordered
+    return list(_iter_ability_ids(entry))
 
 
 def parse_special_abilities(entry: str) -> str:
-    """
-    Parse a special_abilities DB string and return comma-separated friendly names.
-
-    Example input: "1,1^2,1^5,1,5^10,1^12,1^13,1^14,1^15,1^16,1^17,1^21,1^23,1^31,1"
-    Example output: "Summon, Enrage, Flurry, MagicalAttack, Unslowable, Unmezzable, Uncharmable, Unstunable, Unsnarable, Unfearable, Immune to fleeing, Immune to melee except magical, Immune to lull effects"
-    """
+    """Parse a special_abilities DB string and return comma-separated friendly names."""
     if not entry or entry.strip() == "":
         return ""
 
-    # Split on commas
-    parts = [p.strip() for p in entry.split(',') if p.strip()]
-
-    # Get names for known abilities, preserve order of first appearance
-    seen = set()
-    ordered_names = []
-
-    for part in parts:
-        if '^' in part:
-            subparts = part.split('^')
-            for sub in subparts:
-                try:
-                    aid = int(sub)
-                    if aid in SPECIAL_ABILITIES and aid not in seen:
-                        seen.add(aid)
-                        ordered_names.append(SPECIAL_ABILITIES[aid])
-                except ValueError:
-                    pass
-        else:
-            try:
-                aid = int(part)
-                if aid in SPECIAL_ABILITIES and aid not in seen:
-                    seen.add(aid)
-                    ordered_names.append(SPECIAL_ABILITIES[aid])
-            except ValueError:
-                pass
-
-    # Join with comma and space (matching the website style)
+    ordered_names = [SPECIAL_ABILITIES[aid] for aid in _iter_ability_ids(entry)]
     return ", ".join(ordered_names)
