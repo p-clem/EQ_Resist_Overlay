@@ -1,4 +1,4 @@
-# Copilot instructions for EQ Resist Overlay
+# Copilot instructions for Quarm NPC Overlay
 
 ## Big picture
 - Single-app Python overlay with three core pieces: log watcher, SQLite NPC resist DB, and Tkinter GUI, all in eq_resist_overlay.py.
@@ -10,7 +10,7 @@
 - npc_types.sql: source data for NPC resist values.
 - load_db.py: helper to load npc_types.sql into dist/npc_data.db (used for packaged builds).
 - EQ_Resist_Overlay.spec: PyInstaller spec; includes npc_types.sql as data.
-- build.bat: one-click PyInstaller build to dist/EQ_Resist_Overlay.exe.
+- build.bat: one-click release build (EXE + zip) using app_config.json name/version.
 - test_*.py: standalone smoke tests for DB lookup and log parsing.
 
 ## Project-specific conventions

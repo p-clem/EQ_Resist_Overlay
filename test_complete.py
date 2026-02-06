@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 
 print("=" * 60)
-print("EQ RESIST OVERLAY - COMPLETE SYSTEM TEST")
+print("QUARM NPC OVERLAY - COMPLETE SYSTEM TEST")
 print("=" * 60)
 
 # 1. Test database connection and NPC count

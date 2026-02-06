@@ -1,5 +1,4 @@
 param(
-  [string]$Name = "EQ_Resist_Overlay",
   [string]$OutDir = "release"
 )
 
@@ -8,6 +7,8 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
 
+$productName = "Quarm NPC Overlay"
+$exeBase = "Quarm_NPC_Overlay"
 $version = "0.0.0"
 try {
   $appCfgPath = Join-Path $root "app_config.json"
@@ -18,6 +19,7 @@ try {
     }
   }
 } catch {
+  $productName = "Quarm NPC Overlay"
   $version = "0.0.0"
 }
 
@@ -25,8 +27,8 @@ $dist = Join-Path $root "dist"
 $build = Join-Path $root "build"
 $stagingRoot = Join-Path $root $OutDir
 $stamp = Get-Date -Format "yyyyMMdd"
-$zipPath = Join-Path $stagingRoot ("{0}_v{1}_{2}.zip" -f $Name, $version, $stamp)
-$stage = Join-Path $stagingRoot $Name
+$zipPath = Join-Path $stagingRoot ("{0}_v{1}_{2}.zip" -f $exeBase, $version, $stamp)
+$stage = Join-Path $stagingRoot $exeBase
 
 Write-Host "Installing/ensuring PyInstaller is available..."
 python -m pip install pyinstaller --quiet --upgrade
@@ -35,7 +37,7 @@ Write-Host "Building executable..."
 python -m PyInstaller `
   --onefile `
   --windowed `
-  --name $Name `
+  --name $exeBase `
   --icon=NONE `
   --add-data "npc_types.sql;." `
   --distpath "$dist" `
@@ -48,7 +50,7 @@ if ($LASTEXITCODE -ne 0) {
   throw "PyInstaller failed with exit code $LASTEXITCODE"
 }
 
-$exe = Join-Path $dist ("{0}.exe" -f $Name)
+$exe = Join-Path $dist ("{0}.exe" -f $exeBase)
 if (-not (Test-Path $exe)) {
   throw "Build did not produce expected EXE: $exe"
 }
@@ -72,6 +74,7 @@ Copy-Item -Force .\npc_types.sql $stage
 
 # Optional docs
 if (Test-Path .\README.md) { Copy-Item -Force .\README.md $stage }
+if (Test-Path .\app_config.json) { Copy-Item -Force .\app_config.json $stage }
 
 New-Item -ItemType Directory -Force -Path $stagingRoot | Out-Null
 if (Test-Path $zipPath) { Remove-Item -Force $zipPath }

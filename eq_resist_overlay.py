@@ -44,7 +44,7 @@ def main():
         print(f"SQL exists: {sql_path.exists()}")
 
         print("=" * 50)
-        print("EverQuest Resist Overlay")
+        print("Quarm NPC Overlay")
         print(f"Starting at {datetime.now()}")
         print("=" * 50)
 

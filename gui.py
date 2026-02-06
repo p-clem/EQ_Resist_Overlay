@@ -35,7 +35,7 @@ class ResistOverlayGUI:
         # Wrap special abilities by commas (not by spaces)
         self._specials_wrap_chars = 62
 
-        self.root.title("EQ Resist Overlay")
+        self.root.title("Quarm NPC Overlay")
         # Set an initial size; we'll recompute precisely after widgets exist.
         try:
             self.root.geometry(f"{self._width}x60{self._pos}")
@@ -158,7 +158,7 @@ class ResistOverlayGUI:
 
         settings_win = tk.Toplevel(self.root)
         self._settings_win = settings_win
-        settings_win.title("Settings")
+        settings_win.title("Quarm NPC Overlay - Settings")
         settings_win.geometry("520x520")
         settings_win.attributes('-topmost', True)
 
@@ -166,7 +166,7 @@ class ResistOverlayGUI:
         frame.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
 
         # Current path display
-        ttk.Label(frame, text="EQ Log Path:", font=("Arial", 10)).grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
+        ttk.Label(frame, text="Quarm Log Path:", font=("Arial", 10)).grid(row=0, column=0, sticky=tk.W, pady=(0, 5))
 
         current_path = self.config.get_eq_log_path() or "Not set"
         path_label = ttk.Label(frame, text=current_path, font=("Arial", 9), foreground="blue", wraplength=350)
@@ -175,7 +175,7 @@ class ResistOverlayGUI:
         # Browse button
         def browse_file():
             file_path = filedialog.askopenfilename(
-                title="Select EverQuest Log File",
+                title="Select Quarm Log File",
                 filetypes=[("Log files", "eqlog_*.txt"), ("Text files", "*.txt"), ("All files", "*.*")]
             )
             if file_path:
@@ -183,7 +183,7 @@ class ResistOverlayGUI:
                 path_label.config(text=file_path)
                 messagebox.showinfo(
                     "Success",
-                    "EQ log path saved!\n\nThe overlay will begin reading new /consider lines shortly."
+                    "Log path saved!\n\nThe overlay will begin reading new /consider lines shortly."
                 )
                 try:
                     settings_win.destroy()
