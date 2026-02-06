@@ -41,3 +41,33 @@ def npc_lookup_keys(name: str) -> list[str]:
             seen.add(c)
             out.append(c)
     return out
+
+
+def format_level_text(level, maxlevel) -> str:
+    """Format level display, showing a range when maxlevel differs.
+
+    Examples:
+      level=10, maxlevel=10 -> "10"
+      level=10, maxlevel=11 -> "10-11"
+      level="--" -> "--"
+    """
+    try:
+        level_s = str(level).strip() if level is not None else ""
+        level_i = int(level_s) if level_s.isdigit() else None
+
+        try:
+            maxlevel_i = int(maxlevel) if maxlevel not in (None, "", "--") else 0
+        except Exception:
+            maxlevel_i = 0
+
+        if level_i is None:
+            return level_s if level_s else "--"
+
+        if maxlevel_i and maxlevel_i != level_i:
+            lo = min(level_i, maxlevel_i)
+            hi = max(level_i, maxlevel_i)
+            return f"{lo}-{hi}"
+
+        return str(level_i)
+    except Exception:
+        return str(level if level is not None else "--")

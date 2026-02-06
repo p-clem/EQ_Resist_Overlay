@@ -1,8 +1,34 @@
 #!/usr/bin/env python3
-"""Complete end-to-end test of the overlay system"""
-import sqlite3
+"""Complete end-to-end smoke test of the overlay system.
+
+Run:
+  python tests/test_complete.py
+  python -m tests.test_complete
+"""
+
+from __future__ import annotations
+
+import json
 import re
+import sqlite3
 from pathlib import Path
+
+try:
+    from ._bootstrap import REPO_ROOT
+except ImportError:
+    from _bootstrap import REPO_ROOT  # type: ignore
+
+
+def _pick_db_path() -> Path:
+    candidates = [
+        REPO_ROOT / "npc_data.db",
+        REPO_ROOT / "dist" / "npc_data.db",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return candidates[0]
+
 
 print("=" * 60)
 print("QUARM NPC OVERLAY - COMPLETE SYSTEM TEST")
@@ -11,8 +37,13 @@ print("=" * 60)
 # 1. Test database connection and NPC count
 print("\n1. DATABASE TEST")
 print("-" * 60)
-db_path = "dist/npc_data.db"
-conn = sqlite3.connect(db_path)
+
+db_path = _pick_db_path()
+if not db_path.exists():
+    print(f"   ✗ Database not found: {db_path}")
+    raise SystemExit(0)
+
+conn = sqlite3.connect(str(db_path))
 cursor = conn.cursor()
 cursor.execute("SELECT COUNT(*) FROM npcs")
 count = cursor.fetchone()[0]
@@ -31,34 +62,41 @@ test_cases = [
     "Eom Liako",
 ]
 
-def lookup_npc(name):
-    """Test the NPC lookup logic"""
-    # First try exact match (case-insensitive)
-    cursor.execute('''
+
+def lookup_npc(name: str):
+    """Test the NPC lookup logic."""
+    cursor.execute(
+        """
         SELECT name, mr, cr, dr, fr, pr FROM npcs WHERE name_lower = ?
-    ''', (name.lower(),))
-    
+        """,
+        (name.lower(),),
+    )
     result = cursor.fetchone()
-    
-    # If not found, try with underscores instead of spaces
+
     if not result:
-        name_with_underscores = name.replace(' ', '_')
-        cursor.execute('''
+        name_with_underscores = name.replace(" ", "_")
+        cursor.execute(
+            """
             SELECT name, mr, cr, dr, fr, pr FROM npcs WHERE name_lower = ?
-        ''', (name_with_underscores.lower(),))
+            """,
+            (name_with_underscores.lower(),),
+        )
         result = cursor.fetchone()
-    
+
     return result
+
 
 for test_name in test_cases:
     result = lookup_npc(test_name)
     if result:
         print(f"   ✓ {test_name}")
-        print(f"     Found: {result[0]} | MR:{result[1]} CR:{result[2]} DR:{result[3]} FR:{result[4]} PR:{result[5]}")
+        print(
+            f"     Found: {result[0]} | MR:{result[1]} CR:{result[2]} DR:{result[3]} FR:{result[4]} PR:{result[5]}"
+        )
     else:
         print(f"   ✗ {test_name} - NOT FOUND")
 
-# 3. Test log file existence
+# 3. Test log file existence (local dev convenience)
 print("\n3. LOG FILE TEST")
 print("-" * 60)
 log_paths = [
@@ -82,8 +120,8 @@ if not log_file:
 print("\n4. REGEX PARSING TEST")
 print("-" * 60)
 consider_re = re.compile(
-    r'^(?P<target>.*?)\s+(?P<faction>scowls|glar(?:es|es).*?|glowers|is|looks|judges?|kindly|regards).*?(?P<sep>-- )?(?P<diff>.*)?$',
-    re.IGNORECASE
+    r"^(?P<target>.*?)\s+(?P<faction>scowls|glar(?:es|es).*?|glowers|is|looks|judges?|kindly|regards).*?(?P<sep>-- )?(?P<diff>.*)?$",
+    re.IGNORECASE,
 )
 
 test_lines = [
@@ -96,24 +134,27 @@ test_lines = [
 for line in test_lines:
     match = consider_re.match(line)
     if match:
-        npc_name = match.group('target').strip()
+        npc_name = match.group("target").strip()
         print(f"   ✓ MATCHED: {npc_name}")
-        # Try to lookup
         result = lookup_npc(npc_name)
         if result:
             print(f"     Found in DB: {result[0]}")
         else:
-            print(f"     WARNING: Not found in database!")
+            print("     WARNING: Not found in database!")
     else:
         print(f"   ✗ NO MATCH: {line[:50]}...")
 
-# 5. Configuration test
+# 5. Configuration test (packaged builds usually keep it in dist/)
 print("\n5. CONFIGURATION TEST")
 print("-" * 60)
-config_file = Path("dist/config.json")
+config_candidates = [
+    REPO_ROOT / "config.json",
+    REPO_ROOT / "dist" / "config.json",
+]
+config_file = next((p for p in config_candidates if p.exists()), config_candidates[0])
+
 if config_file.exists():
-    import json
-    with open(config_file) as f:
+    with open(config_file, encoding="utf-8") as f:
         config = json.load(f)
     print(f"   ✓ Config file found: {config_file}")
     print(f"     EQ Log Path: {config.get('eq_log_path')}")

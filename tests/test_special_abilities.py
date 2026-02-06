@@ -1,4 +1,11 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
+
+from __future__ import annotations
+
+try:
+    from ._bootstrap import REPO_ROOT  # noqa: F401
+except ImportError:
+    from _bootstrap import REPO_ROOT  # type: ignore  # noqa: F401
 
 from special_abilities import parse_special_abilities, parse_special_abilities_ids
 

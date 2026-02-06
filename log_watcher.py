@@ -158,7 +158,7 @@ class EQLogWatcher:
 
                                     for key in keys:
                                         cursor.execute('''
-                                            SELECT name, level, hp, mana, mindmg, maxdmg, ac, mr, cr, dr, fr, pr, special_abilities FROM npcs WHERE name_lower = ?
+                                            SELECT name, level, maxlevel, hp, mana, mindmg, maxdmg, ac, mr, cr, dr, fr, pr, special_abilities FROM npcs WHERE name_lower = ?
                                         ''', (key.lower(),))
                                         result = cursor.fetchone()
                                         if result:
@@ -166,7 +166,7 @@ class EQLogWatcher:
                                             break
 
                                     if result:
-                                        special_raw = result[12] if len(result) > 12 else ''
+                                        special_raw = result[13] if len(result) > 13 else ''
                                         special_labels = parse_special_abilities(special_raw) if special_raw else ''
                                         if debug_specials:
                                             try:
@@ -180,16 +180,17 @@ class EQLogWatcher:
                                             'name': result[0],
                                             'display_name': npc_name,
                                             'level': result[1],
-                                            'hp': result[2],
-                                            'mana': result[3],
-                                            'mindmg': result[4],
-                                            'maxdmg': result[5],
-                                            'ac': result[6],
-                                            'MR': result[7],
-                                            'CR': result[8],
-                                            'DR': result[9],
-                                            'FR': result[10],
-                                            'PR': result[11],
+                                            'maxlevel': result[2],
+                                            'hp': result[3],
+                                            'mana': result[4],
+                                            'mindmg': result[5],
+                                            'maxdmg': result[6],
+                                            'ac': result[7],
+                                            'MR': result[8],
+                                            'CR': result[9],
+                                            'DR': result[10],
+                                            'FR': result[11],
+                                            'PR': result[12],
                                             'special_abilities': special_raw,
                                             'special_abilities_labels': special_labels,
                                         }

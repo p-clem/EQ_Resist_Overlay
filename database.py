@@ -10,6 +10,7 @@ class EQResistDatabase:
     def __init__(self, db_path='npc_data.db'):
         self.db_path = db_path
         self.conn = None
+        self.schema_updated = False
         self.init_db()
 
     def init_db(self):
@@ -22,6 +23,7 @@ class EQResistDatabase:
                 name TEXT UNIQUE NOT NULL,
                 name_lower TEXT UNIQUE NOT NULL,
                 level INTEGER DEFAULT 0,
+                maxlevel INTEGER DEFAULT 0,
                 hp INTEGER DEFAULT 0,
                 mana INTEGER DEFAULT 0,
                 mindmg INTEGER DEFAULT 0,
@@ -36,15 +38,17 @@ class EQResistDatabase:
             )
         ''')
         self.conn.commit()
-        self._ensure_columns()
+        self.schema_updated = bool(self._ensure_columns())
 
-    def _ensure_columns(self):
+    def _ensure_columns(self) -> bool:
         cursor = self.conn.cursor()
         cursor.execute("PRAGMA table_info(npcs)")
         cols = {row[1] for row in cursor.fetchall()}
         to_add = []
         if 'level' not in cols:
             to_add.append("ALTER TABLE npcs ADD COLUMN level INTEGER DEFAULT 0")
+        if 'maxlevel' not in cols:
+            to_add.append("ALTER TABLE npcs ADD COLUMN maxlevel INTEGER DEFAULT 0")
         if 'hp' not in cols:
             to_add.append("ALTER TABLE npcs ADD COLUMN hp INTEGER DEFAULT 0")
         if 'mana' not in cols:
@@ -62,6 +66,8 @@ class EQResistDatabase:
             cursor.execute(stmt)
         if to_add:
             self.conn.commit()
+            return True
+        return False
 
     def populate_from_sql(self, sql_file):
         """Parse SQL dump and populate database"""
@@ -83,6 +89,8 @@ class EQResistDatabase:
                             if len(values) >= 50 and values[1]:
                                 name = values[1]
                                 level = int(values[3]) if values[3] else 0
+                                # npc_types.sql column order: maxlevel is index 67 (0-based)
+                                maxlevel = int(values[67]) if len(values) > 67 and values[67] else 0
                                 hp = int(values[7]) if values[7] else 0
                                 mana = int(values[8]) if values[8] else 0
                                 mindmg = int(values[20]) if len(values) > 20 and values[20] else 0
@@ -99,9 +107,9 @@ class EQResistDatabase:
 
                                 try:
                                     cursor.execute('''
-                                        INSERT OR REPLACE INTO npcs (id, name, name_lower, level, hp, mana, mindmg, maxdmg, ac, mr, cr, dr, fr, pr, special_abilities)
-                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                    ''', (values[0], name, name_lower, level, hp, mana, mindmg, maxdmg, ac, mr, cr, dr, fr, pr, special_abilities))
+                                        INSERT OR REPLACE INTO npcs (id, name, name_lower, level, maxlevel, hp, mana, mindmg, maxdmg, ac, mr, cr, dr, fr, pr, special_abilities)
+                                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    ''', (values[0], name, name_lower, level, maxlevel, hp, mana, mindmg, maxdmg, ac, mr, cr, dr, fr, pr, special_abilities))
                                 except sqlite3.IntegrityError:
                                     pass  # Duplicate, skip
                         except (IndexError, ValueError):
@@ -160,7 +168,7 @@ class EQResistDatabase:
                 pass
         for key in keys:
             cursor.execute('''
-                SELECT name, level, hp, mana, mindmg, maxdmg, ac, mr, cr, dr, fr, pr, special_abilities FROM npcs WHERE name_lower = ?
+                SELECT name, level, maxlevel, hp, mana, mindmg, maxdmg, ac, mr, cr, dr, fr, pr, special_abilities FROM npcs WHERE name_lower = ?
             ''', (key.lower(),))
             result = cursor.fetchone()
             if result:
@@ -168,7 +176,7 @@ class EQResistDatabase:
                 break
 
         if result:
-            special_raw = result[12] if len(result) > 12 else ''
+            special_raw = result[13] if len(result) > 13 else ''
             special_labels = parse_special_abilities(special_raw) if special_raw else ''
             if debug_specials:
                 try:
@@ -180,16 +188,17 @@ class EQResistDatabase:
             return {
                 'name': result[0],
                 'level': result[1],
-                'hp': result[2],
-                'mana': result[3],
-                'mindmg': result[4],
-                'maxdmg': result[5],
-                'ac': result[6],
-                'MR': result[7],
-                'CR': result[8],
-                'DR': result[9],
-                'FR': result[10],
-                'PR': result[11],
+                'maxlevel': result[2],
+                'hp': result[3],
+                'mana': result[4],
+                'mindmg': result[5],
+                'maxdmg': result[6],
+                'ac': result[7],
+                'MR': result[8],
+                'CR': result[9],
+                'DR': result[10],
+                'FR': result[11],
+                'PR': result[12],
                 'special_abilities': special_raw,
                 'special_abilities_labels': special_labels,
             }

@@ -14,6 +14,7 @@ except ImportError:
     HAS_TK = False
 
 from special_abilities import SPECIAL_ABILITIES, parse_special_abilities_ids
+from utils import format_level_text
 
 
 class ResistOverlayGUI:
@@ -394,7 +395,7 @@ class ResistOverlayGUI:
 
             if self._show_stats:
                 try:
-                    level = resists.get('level', '--')
+                    level = format_level_text(resists.get('level', '--'), resists.get('maxlevel', 0))
                     hp = resists.get('hp', '--')
                     mana = resists.get('mana', '--')
                     ac = resists.get('ac', '--')
@@ -456,7 +457,7 @@ class ResistOverlayGUI:
 
         # Stats
         try:
-            level = resists.get('level', '--')
+            level = format_level_text(resists.get('level', '--'), resists.get('maxlevel', 0))
             hp = resists.get('hp', '--')
             mana = resists.get('mana', '--')
             ac = resists.get('ac', '--')

@@ -99,7 +99,15 @@ def main():
             dmg_count = 0
         print(f"Database has {dmg_count} NPCs with min/max damage")
 
-        needs_backfill = (count > 0 and (special_count == 0 or stats_count == 0 or dmg_count == 0))
+        maxlevel_count = 0
+        try:
+            cursor.execute("SELECT COUNT(*) FROM npcs WHERE maxlevel IS NOT NULL AND maxlevel <> 0")
+            maxlevel_count = int(cursor.fetchone()[0] or 0)
+        except Exception:
+            maxlevel_count = 0
+        print(f"Database has {maxlevel_count} NPCs with maxlevel")
+
+        needs_backfill = (count > 0 and (special_count == 0 or stats_count == 0 or dmg_count == 0 or maxlevel_count == 0))
 
         if count == 0 or needs_backfill:
             # Try multiple locations for SQL file
