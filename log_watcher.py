@@ -29,6 +29,69 @@ class EQLogWatcher:
         )
         self.entered_re = re.compile(r'^You have entered (?P<zone>.+?)\.$', re.IGNORECASE)
 
+    def _clear_current_zone(self):
+        self.current_zone_long = None
+        self.current_zone_short = None
+
+    def _set_current_zone(self, zone_long: str, cursor) -> None:
+        zone_long = (zone_long or '').strip()
+        if not zone_long:
+            return
+        if self.current_zone_long and self.current_zone_long.lower() == zone_long.lower():
+            return
+
+        self.current_zone_long = zone_long
+        try:
+            self.current_zone_short = self.db.get_zone_short_name(zone_long, cursor=cursor)
+        except Exception:
+            self.current_zone_short = None
+
+        if self.current_zone_short:
+            print(f"[ZONE] Entered {zone_long} ({self.current_zone_short})")
+        else:
+            print(f"[ZONE] Entered {zone_long}")
+
+    def _initialize_zone_from_log_tail(self, cursor, max_bytes: int = 2 * 1024 * 1024) -> None:
+        """Initialize current zone by scanning recent lines in the existing log.
+
+        This enables correct zone-aware lookups even when the overlay starts after
+        the game has been running and no new "You have entered ..." line will be
+        emitted.
+        """
+        if not self.log_file:
+            return
+        try:
+            if not self.log_file.exists():
+                return
+        except Exception:
+            return
+
+        try:
+            size = self.log_file.stat().st_size
+            start = max(0, size - int(max_bytes))
+            with open(self.log_file, 'rb') as f:
+                f.seek(start)
+                data = f.read()
+            text = data.decode('utf-8', errors='ignore')
+
+            # If we started mid-line, discard the first partial line.
+            if start > 0:
+                nl = text.find('\n')
+                if nl != -1:
+                    text = text[nl + 1 :]
+
+            lines = text.splitlines()
+            for line in reversed(lines):
+                clean_line = re.sub(r'^\[.*?\]\s+', '', str(line).strip())
+                m_zone = self.entered_re.match(clean_line)
+                if m_zone:
+                    zone_long = (m_zone.group('zone') or '').strip()
+                    self._set_current_zone(zone_long, cursor)
+                    return
+        except Exception:
+            # Best-effort only; if anything goes wrong, continue without zone.
+            return
+
     def _find_eq_log(self):
         """Find the EQ log file.
 
@@ -85,6 +148,7 @@ class EQLogWatcher:
                             print(f"Watching log file: {self.log_file}")
                             self.first_run = True
                             self.last_position = 0
+                            self._clear_current_zone()
 
                 if not self.log_file:
                     self.log_file = self._find_eq_log()
@@ -92,6 +156,7 @@ class EQLogWatcher:
                         print(f"Watching log file: {self.log_file}")
                         self.first_run = True
                         self.last_position = 0
+                        self._clear_current_zone()
 
                 if not self.log_file:
                     # Still no log file, wait and retry
@@ -105,6 +170,7 @@ class EQLogWatcher:
                         print("Log file size decreased; resetting watcher position")
                         self.last_position = 0
                         self.first_run = True
+                        self._clear_current_zone()
                 except Exception:
                     pass
 
@@ -112,6 +178,11 @@ class EQLogWatcher:
                     with open(self.log_file, 'r', encoding='utf-8', errors='ignore') as f:
                         # On first run, skip to end of file so we only catch NEW considers
                         if self.first_run:
+                            # But first, initialize current zone from recent log history.
+                            try:
+                                self._initialize_zone_from_log_tail(db_conn.cursor())
+                            except Exception:
+                                pass
                             f.seek(0, 2)  # Seek to end
                             self.last_position = f.tell()
                             self.first_run = False
@@ -139,16 +210,7 @@ class EQLogWatcher:
                                     m_zone = self.entered_re.match(clean_line)
                                     if m_zone:
                                         zone_long = (m_zone.group('zone') or '').strip()
-                                        self.current_zone_long = zone_long
-                                        try:
-                                            zcur = db_conn.cursor()
-                                            self.current_zone_short = self.db.get_zone_short_name(zone_long, cursor=zcur)
-                                        except Exception:
-                                            self.current_zone_short = None
-                                        if self.current_zone_short:
-                                            print(f"[ZONE] Entered {zone_long} ({self.current_zone_short})")
-                                        else:
-                                            print(f"[ZONE] Entered {zone_long}")
+                                        self._set_current_zone(zone_long, db_conn.cursor())
                                 except Exception:
                                     pass
 

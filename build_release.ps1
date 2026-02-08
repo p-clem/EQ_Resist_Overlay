@@ -30,6 +30,35 @@ $stamp = Get-Date -Format "yyyyMMdd"
 $zipPath = Join-Path $stagingRoot ("{0}_v{1}_{2}.zip" -f $exeBase, $version, $stamp)
 $stage = Join-Path $stagingRoot $exeBase
 
+function Remove-SafeDir {
+  param(
+    [Parameter(Mandatory=$true)][string]$PathToRemove,
+    [Parameter(Mandatory=$true)][string]$WorkspaceRoot
+  )
+
+  try {
+    $fullRoot = [System.IO.Path]::GetFullPath($WorkspaceRoot)
+    $fullPath = [System.IO.Path]::GetFullPath($PathToRemove)
+
+    if ($fullPath -eq $fullRoot) {
+      throw "Refusing to delete workspace root: $fullPath"
+    }
+    if (-not ($fullPath.StartsWith($fullRoot, [System.StringComparison]::OrdinalIgnoreCase))) {
+      throw "Refusing to delete path outside workspace root. Root=$fullRoot Path=$fullPath"
+    }
+    if (Test-Path $fullPath) {
+      Write-Host "Cleaning directory: $fullPath"
+      Remove-Item -Recurse -Force $fullPath
+    }
+  } catch {
+    throw $_
+  }
+}
+
+# Always start from a clean packaging state (prevents stale files in releases)
+Remove-SafeDir -PathToRemove $dist -WorkspaceRoot $root
+Remove-SafeDir -PathToRemove $stagingRoot -WorkspaceRoot $root
+
 Write-Host "Installing/ensuring PyInstaller is available..."
 python -m pip install pyinstaller --quiet --upgrade
 

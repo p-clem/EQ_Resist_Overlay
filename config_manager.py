@@ -25,7 +25,7 @@ class ConfigManager:
             # Whether to show resist values in the overlay.
             'show_resists': True,
             # Whether to show special abilities in the overlay.
-            'show_special_abilities': False,
+            'show_special_abilities': True,
             # Optional filter of which special ability IDs to show.
             # Stored as {"10": true, "14": false, ...}. Missing IDs default to shown.
             'special_abilities_filter': {},
